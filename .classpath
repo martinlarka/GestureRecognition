@@ -2,7 +2,15 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="LeapJava.jar"/>
-	<classpathentry kind="lib" path="javaml-0.1.7.jar"/>
+	<classpathentry kind="lib" path="javaml-0.1.7.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/martin/Documents/Projekt/Java/GestureRecognition"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="LeapJava.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/martin/Documents/Projekt/Java/LeapDeveloperKit_2.1.3+21998_mac/LeapSDK/lib"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
