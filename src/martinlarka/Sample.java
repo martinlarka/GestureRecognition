@@ -1,9 +1,12 @@
 package martinlarka;
 
-import java.awt.Frame;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.leapmotion.leap.*;
+
+import net.sf.javaml.core.DenseInstance;
+import net.sf.javaml.core.Instance;
 
 class SampleListener extends Listener {
 	
@@ -27,8 +30,9 @@ class SampleListener extends Listener {
     }
 
     public void onFrame(Controller controller) {
+		
         // Get the most recent frame and report some basic information
-        com.leapmotion.leap.Frame frame = controller.frame();
+        Frame frame = controller.frame();
         
         //Get hands
         for(Hand hand : frame.hands()) {
@@ -52,6 +56,9 @@ class SampleListener extends Listener {
                              + ", wrist position: " + toHandCoor(arm.wristPosition())
                              + ", elbow position: " + toHandCoor(arm.elbowPosition()));
 
+            VectorInstance[] instances = new VectorInstance[24];
+            int i = 0;
+            
             // Get fingers
             for (Finger finger : hand.fingers()) {
                 System.out.println("    " + finger.type() + ", id: " + finger.id()
@@ -61,10 +68,9 @@ class SampleListener extends Listener {
                 //Get Bones
                 for(Bone.Type boneType : Bone.Type.values()) {
                     Bone bone = finger.bone(boneType);
-                    System.out.println("      " + bone.type()
-                                     + " bone, start: " + toHandCoor(bone.prevJoint())
-                                     + ", end: " + toHandCoor(bone.nextJoint())
-                                     + ", direction: " + bone.direction());
+                    
+                    instances[i] = new VectorInstance(bone.direction());
+                    i++;
                 }
             }
 
@@ -82,6 +88,8 @@ class SampleListener extends Listener {
 
 class Sample {
     public static void main(String[] args) {
+    	
+    	
         // Create a sample listener and controller
         SampleListener listener = new SampleListener();
         Controller controller = new Controller();
@@ -89,8 +97,6 @@ class Sample {
         // Have the sample listener receive events from the controller
         controller.addListener(listener);
         
-        GestureGUI gui = new GestureGUI();
-        gui.setVisible();
 
         // Keep this process running until Enter is pressed
         System.out.println("Press Enter to quit...");
