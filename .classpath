@@ -12,5 +12,6 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/martin/Documents/Projekt/Java/LeapDeveloperKit_2.1.3+21998_mac/LeapSDK/lib"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/Users/martin/Documents/Projekt/Java/ajt-2/ajt-2.11.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
