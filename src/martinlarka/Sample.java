@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Scanner;
 
+import net.sf.javaml.classification.Classifier;
+import net.sf.javaml.classification.KDtreeKNN;
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.core.DenseInstance;
@@ -15,9 +17,12 @@ class SampleListener extends Listener {
 
 	Dataset gestures = new DefaultDataset();
 	String value = "";
+	boolean classify = false;
 
 	double[] prevData = new double[19*3];
 	double[] instanceData = new double[19*3];
+	
+	Classifier knn;
 
 	public void onInit(Controller controller) {
 		System.out.println("Initialized");
@@ -73,6 +78,10 @@ class SampleListener extends Listener {
 				gestures.add(temp);
 				value = "";
 			}
+			if (classify && i == instanceData.length) {
+				DenseInstance temp = new DenseInstance(instanceData);
+				Object predictedClassValue = knn.classify(temp);
+			}
 		}
 	}
 
@@ -81,13 +90,30 @@ class SampleListener extends Listener {
 	}
 
 	public void saveData() {
-		System.out.println(gestures);
+		System.out.println("Saving " + gestures.size() + " gestures");
 		try {
 			FileHandler.exportDataset(gestures,new File("output.txt"));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void loadData() {
+		System.out.println("Loading gestures");
+		try {
+			gestures = FileHandler.loadDataset(new File("output.txt"), 0,"\t");
+			System.out.println(gestures.size() + " gestures loaded");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void classify() {
+		knn = new KDtreeKNN(5);
+        knn.buildClassifier(gestures);
+        System.out.println("Classifying with traingingset of size " + gestures.size());
+        classify = true;
 	}
 
 }
@@ -109,15 +135,26 @@ class Sample {
 
 		Scanner keyboard = new Scanner(System.in);
 		String value = "";
+		
+		boolean quitBool = false;
 
-		while (!value.equals("quit")) {
+		while (!quitBool) {
 			System.out.println("enter a sign value");
 			value = keyboard.nextLine();
-			listener.setValue(value);
+			if (value.equals("quit")) {
+				quitBool = true;
+			} else if (value.equals("load")) {
+				listener.loadData();
+			} else if (value.equals("save")) {
+				listener.saveData();				
+			} else if (value.equals("classify")) {
+				listener.classify();				
+			} else {
+				listener.setValue(value);
+			}
 		}
 		keyboard.close();
 
-		listener.saveData();
 		// Remove the sample listener when done
 		//controller.removeListener(listener);
 	}
