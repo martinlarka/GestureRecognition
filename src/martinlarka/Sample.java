@@ -2,6 +2,7 @@ package martinlarka;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import net.sf.javaml.classification.Classifier;
@@ -17,10 +18,14 @@ class SampleListener extends Listener {
 
 	Dataset gestures = new DefaultDataset();
 	String value = "";
+	String realValue = "";
 	boolean classify = false;
 
 	double[] prevData = new double[19*3];
 	double[] instanceData = new double[19*3];
+	
+	ArrayList<String> realValues = new ArrayList<String>();
+	ArrayList<String> predictedValues = new ArrayList<String>();
 	
 	Classifier knn;
 
@@ -72,7 +77,7 @@ class SampleListener extends Listener {
 					}
 				}
 			}
-			if (i == instanceData.length && !value.equals("")) {
+			if (i == instanceData.length && !value.equals("") && !classify) {
 				System.out.println("Entering "+ (gestures.size() + 1)  +" gesture with value " + value);
 				DenseInstance temp = new DenseInstance(instanceData, value);
 				gestures.add(temp);
@@ -81,6 +86,13 @@ class SampleListener extends Listener {
 			if (classify && i == instanceData.length) {
 				DenseInstance temp = new DenseInstance(instanceData);
 				Object predictedClassValue = knn.classify(temp);
+				System.out.println("Predicted value: " + (String)predictedClassValue);
+				if (!value.equals("")) {
+					System.out.println("ADDED TEST SCORE");
+					realValues.add(value);
+					predictedValues.add((String)predictedClassValue);
+					value = "";
+				}
 			}
 		}
 	}
@@ -89,20 +101,20 @@ class SampleListener extends Listener {
 		this.value = val;
 	}
 
-	public void saveData() {
-		System.out.println("Saving " + gestures.size() + " gestures");
+	public void saveData(String fileName) {
+		System.out.println("Saving " + gestures.size() + " gestures to: " + fileName);
 		try {
-			FileHandler.exportDataset(gestures,new File("output.txt"));
+			FileHandler.exportDataset(gestures,new File(fileName));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	public void loadData() {
-		System.out.println("Loading gestures");
+	public void loadData(String fileName) {
+		System.out.println("Loading gestures: " + fileName);
 		try {
-			gestures = FileHandler.loadDataset(new File("output.txt"), 0,"\t");
+			gestures = FileHandler.loadDataset(new File(fileName), 0,"\t");
 			System.out.println(gestures.size() + " gestures loaded");
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -110,10 +122,22 @@ class SampleListener extends Listener {
 	}
 	
 	public void classify() {
-		knn = new KDtreeKNN(5);
-        knn.buildClassifier(gestures);
-        System.out.println("Classifying with traingingset of size " + gestures.size());
-        classify = true;
+		if (!classify) {
+			knn = new KDtreeKNN(5);
+        	knn.buildClassifier(gestures);
+        	System.out.println("Classifying with traingingset of size " + gestures.size());
+        	classify = true;
+		} else {
+			classify = false;
+		}
+	}
+	
+	public void printResult() {
+		System.out.println("Predicted value \t Real value");
+		for (int i=0; i<predictedValues.size(); i++) {
+			System.out.print(predictedValues.get(i) + "\t");
+			System.out.println(realValues.get(i));
+		}
 	}
 
 }
@@ -144,13 +168,15 @@ class Sample {
 			value = keyboard.nextLine();
 			if (value.equals("quit")) {
 				quitBool = true;
-			} else if (value.equals("load")) {
-				listener.loadData();
-			} else if (value.equals("save")) {
-				listener.saveData();				
+			} else if (value.startsWith("load")) {
+				listener.loadData(value.substring(4));
+			} else if (value.startsWith("save")) {
+				listener.saveData(value.substring(4));				
 			} else if (value.equals("classify")) {
 				listener.classify();				
-			} else if (value.equals("")) { 
+			} else if (value.equals("print")) {
+				 listener.printResult();
+			} else if (value.equals("")) {
 				listener.setValue(lastValue);
 			} else {
 				listener.setValue(value);
