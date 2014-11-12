@@ -135,6 +135,7 @@ class Sample {
 
 		Scanner keyboard = new Scanner(System.in);
 		String value = "";
+		String lastValue = "";
 		
 		boolean quitBool = false;
 
@@ -149,8 +150,11 @@ class Sample {
 				listener.saveData();				
 			} else if (value.equals("classify")) {
 				listener.classify();				
+			} else if (value.equals("")) { 
+				listener.setValue(lastValue);
 			} else {
 				listener.setValue(value);
+				lastValue = value;
 			}
 		}
 		keyboard.close();
