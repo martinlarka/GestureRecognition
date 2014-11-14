@@ -16,18 +16,24 @@ import com.leapmotion.leap.*;
 
 class SampleListener extends Listener {
 
-	Dataset gestures = new DefaultDataset();
+	Dataset gesturesDir = new DefaultDataset();
+	Dataset gesturesPos = new DefaultDataset();
 	String value = "";
 	String realValue = "";
 	boolean classify = false;
 
-	double[] prevData = new double[19*3];
-	double[] instanceData = new double[19*3];
+	double[] prevDirectionData = new double[19*3];
+	double[] instanceDirectionData = new double[19*3];
 	
+	double[] prevPositionData = new double[19*3];
+	double[] instancePositionData = new double[19*3];
+
 	ArrayList<String> realValues = new ArrayList<String>();
-	ArrayList<String> predictedValues = new ArrayList<String>();
-	
-	Classifier knn;
+	ArrayList<String> predictedDirValues = new ArrayList<String>();
+	ArrayList<String> predictedPosValues = new ArrayList<String>();
+
+	Classifier knnDir;
+	Classifier knnPos;
 
 	public void onInit(Controller controller) {
 		System.out.println("Initialized");
@@ -54,8 +60,12 @@ class SampleListener extends Listener {
 		//Get hands
 		for(Hand hand : frame.hands()) {
 
-			prevData = instanceData;
-			instanceData = new double[19*3];
+			prevDirectionData = instanceDirectionData;
+			instanceDirectionData = new double[19*3];
+			
+			prevPositionData = instancePositionData;
+			instancePositionData = new double[19*3];
+			
 			int i = 0;
 
 			// Get fingers
@@ -69,28 +79,47 @@ class SampleListener extends Listener {
 					Bone bone = finger.bone(boneType);
 					//System.out.println(finger.type() + " "+ bone.type());
 					if ((bone.type().compareTo(Bone.Type.TYPE_METACARPAL) != 0) || (finger.type().compareTo(Finger.Type.TYPE_THUMB) != 0)) {
-						Vector temp = bone.direction();
-						instanceData[i] = (double)temp.getX();
-						instanceData[i+1] = (double)temp.getY();
-						instanceData[i+2] = (double)temp.getZ();
+						Vector tempDir = bone.direction();
+						instanceDirectionData[i] = (double)tempDir.getX();
+						instanceDirectionData[i+1] = (double)tempDir.getY();
+						instanceDirectionData[i+2] = (double)tempDir.getZ();
+						
+						Vector tempPos = bone.prevJoint();
+						tempPos = tempPos.minus(hand.wristPosition());
+						instancePositionData[i] = (double)tempPos.getX();
+						instancePositionData[i+1] = (double)tempPos.getY();
+						instancePositionData[i+2] = (double)tempPos.getZ();
+						
 						i = i+3;
 					}
 				}
 			}
-			if (i == instanceData.length && !value.equals("") && !classify) {
-				System.out.println("Entering "+ (gestures.size() + 1)  +" gesture with value " + value);
-				DenseInstance temp = new DenseInstance(instanceData, value);
-				gestures.add(temp);
+			if (i == instanceDirectionData.length && !value.equals("") && !classify) {
+				System.out.println("Entering "+ (gesturesDir.size() + 1)  +" gesture with value " + value);
+				
+				DenseInstance tempDir = new DenseInstance(instanceDirectionData, value);
+				gesturesDir.add(tempDir);
+				
+				DenseInstance tempPos = new DenseInstance(instancePositionData, value);
+				gesturesPos.add(tempPos);
+				
 				value = "";
 			}
-			if (classify && i == instanceData.length) {
-				DenseInstance temp = new DenseInstance(instanceData);
-				Object predictedClassValue = knn.classify(temp);
-				System.out.println("Predicted value: " + (String)predictedClassValue);
+			if (classify && i == instanceDirectionData.length) {
+				DenseInstance temp = new DenseInstance(instanceDirectionData);
+				Object predictedDirClassValue = knnDir.classify(temp);
+				
+				DenseInstance temp2 = new DenseInstance(instancePositionData);
+				Object predictedPosClassValue = knnPos.classify(temp2);
+				
+				
+				System.out.print("Predicted dir value: " + (String)predictedDirClassValue);
+				System.out.println(" Predicted pos value: " + (String)predictedPosClassValue);
 				if (!value.equals("")) {
 					System.out.println("ADDED TEST SCORE");
 					realValues.add(value);
-					predictedValues.add((String)predictedClassValue);
+					predictedDirValues.add((String)predictedDirClassValue);
+					predictedPosValues.add((String)predictedPosClassValue);
 					value = "";
 				}
 			}
@@ -102,40 +131,49 @@ class SampleListener extends Listener {
 	}
 
 	public void saveData(String fileName) {
-		System.out.println("Saving " + gestures.size() + " gestures to: " + fileName);
+		System.out.println("Saving " + gesturesDir.size() + " gestures to: " + fileName);
 		try {
-			FileHandler.exportDataset(gestures,new File(fileName));
+			FileHandler.exportDataset(gesturesDir,new File(fileName+"dir"));
+			FileHandler.exportDataset(gesturesPos,new File(fileName+"pos"));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void loadData(String fileName) {
 		System.out.println("Loading gestures: " + fileName);
 		try {
-			gestures = FileHandler.loadDataset(new File(fileName), 0,"\t");
-			System.out.println(gestures.size() + " gestures loaded");
+			Dataset loadedDirSet = FileHandler.loadDataset(new File(fileName+"dir"), 0,"\t");
+			Dataset loadedPosSet = FileHandler.loadDataset(new File(fileName+"pos"), 0,"\t");
+			System.out.println(loadedDirSet.size() + " gestures loaded");
+			gesturesDir.addAll(loadedDirSet);
+			gesturesPos.addAll(loadedPosSet);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void classify() {
 		if (!classify) {
-			knn = new KDtreeKNN(5);
-        	knn.buildClassifier(gestures);
-        	System.out.println("Classifying with traingingset of size " + gestures.size());
-        	classify = true;
+			knnDir = new KDtreeKNN(5);
+			knnDir.buildClassifier(gesturesDir);
+			
+			knnPos = new KDtreeKNN(5); //TODO Variable K
+			knnPos.buildClassifier(gesturesPos);
+			
+			System.out.println("Classifying with traingingset of size " + gesturesDir.size());
+			classify = true;
 		} else {
 			classify = false;
 		}
 	}
-	
+
 	public void printResult() {
-		System.out.println("Predicted value \t Real value");
-		for (int i=0; i<predictedValues.size(); i++) {
-			System.out.print(predictedValues.get(i) + "\t");
+		System.out.println("Predicted direction value \t Predicted position value \t Real value");
+		for (int i=0; i<realValues.size(); i++) {
+			System.out.print(predictedDirValues.get(i) + "\t");
+			System.out.print(predictedPosValues.get(i) + "\t");
 			System.out.println(realValues.get(i));
 		}
 	}
@@ -160,7 +198,7 @@ class Sample {
 		Scanner keyboard = new Scanner(System.in);
 		String value = "";
 		String lastValue = "";
-		
+
 		boolean quitBool = false;
 
 		while (!quitBool) {
@@ -175,7 +213,7 @@ class Sample {
 			} else if (value.equals("classify")) {
 				listener.classify();				
 			} else if (value.equals("print")) {
-				 listener.printResult();
+				listener.printResult();
 			} else if (value.equals("")) {
 				listener.setValue(lastValue);
 			} else {
@@ -186,7 +224,7 @@ class Sample {
 		keyboard.close();
 
 		// Remove the sample listener when done
-		//controller.removeListener(listener);
+		controller.removeListener(listener);
 	}
 }
 
